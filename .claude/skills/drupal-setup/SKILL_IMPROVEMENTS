@@ -900,3 +900,184 @@ These improvements address:
 - **Team collaboration** (clear documentation, consistent setup)
 
 Implementing these changes will make the Drupal setup skill more robust, user-friendly, and production-ready.
+
+
+## Improvements As an Agent using an existing project locally
+
+**Based on first test run: 2025-11-11**
+
+### 1. **CRITICAL: Authentication & Manual Steps Detection**
+
+**Problem**: The skill attempts commands requiring authentication (git clone, ddev start with sudo), which fail and waste time.
+
+**What happened**:
+- Attempted `git clone` with HTTPS → Failed (no credentials)
+- Attempted `git clone` with SSH → Blocked by user
+- Attempted `ddev start` → Failed (needs sudo password on first run)
+
+**Solution**: Detect authentication requirements upfront and provide manual instructions BEFORE attempting.
+
+**Implementation**:
+```
+At start of "Existing Project Setup":
+
+1. User provides GitHub URL
+2. Immediately output manual instructions:
+
+┌─────────────────────────────────────────────────────────────┐
+│ MANUAL STEPS REQUIRED (authentication needed)              │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ Please run these commands:                                  │
+│                                                             │
+│ 1. Clone repository:                                        │
+│    cd /path/to/directory                                   │
+│    git clone git@github.com:user/repo.git folder-name     │
+│    cd folder-name                                          │
+│    git checkout branch-name                                │
+│                                                             │
+│ 2. Start DDEV (requires sudo):                             │
+│    ddev start                                              │
+│                                                             │
+│ Type 'done' when complete                                   │
+└─────────────────────────────────────────────────────────────┘
+
+3. Wait for user confirmation
+4. Then proceed with automated steps (composer install, drush commands)
+```
+
+**Commands to NEVER attempt**:
+- `git clone`
+- `git push`
+- `git pull`
+- `ddev start` (first time - check if hostname exists in /etc/hosts)
+
+**Safe commands**:
+- All `ddev drush` commands
+- All `ddev composer` commands
+- `ddev describe`, `ddev restart`
+- Local git operations: `git status`, `git add`, `git commit`
+
+---
+
+### 2. **Empty Config Directory Detection**
+
+**Problem**: Skill checks for `config/sync` directory but doesn't verify it contains actual config files.
+
+**What happened**:
+- Directory existed with only `.gitkeep`
+- Skill planned to "install from existing config"
+- Actually needed fresh install
+
+**Solution**: Check for actual config content:
+
+```bash
+if [ -f "config/sync/core.extension.yml" ]; then
+  echo "✓ Found existing configuration"
+  ddev drush site:install --existing-config --account-pass=admin -y
+else
+  echo "ℹ No configuration found - fresh install"
+  ddev drush site:install --account-pass=admin -y
+  ddev drush config:export -y
+fi
+```
+
+---
+
+### 3. **Upfront Summary of Manual Steps**
+
+**Problem**: User discovers manual steps incrementally, which is frustrating.
+
+**Solution**: Show complete checklist at start:
+
+```
+Drupal Project Setup Plan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 MANUAL STEPS (you):
+   [ ] 1. Clone repository (authentication required)
+   [ ] 2. Start DDEV (sudo password required)
+
+🤖 AUTOMATED STEPS (me):
+   [ ] 3. Verify project structure
+   [ ] 4. Install Composer dependencies (~2-3 min)
+   [ ] 5. Install Drupal
+   [ ] 6. Export configuration
+   [ ] 7. Provide access details
+
+Estimated time: ~5 minutes
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+Update checklist as progress happens using emojis: [✓] [→] [ ]
+
+---
+
+### 4. **DDEV First-Start Detection**
+
+**Problem**: First `ddev start` needs sudo. Skill tries anyway and fails.
+
+**Solution**: Check if hostname already in hosts file:
+
+```bash
+PROJECT_HOSTNAME="${PROJECT_NAME}.ddev.site"
+
+if grep -q "$PROJECT_HOSTNAME" /etc/hosts 2>/dev/null; then
+  ddev start  # Safe to run
+else
+  # Show manual instruction (needs sudo)
+  echo "Please run: ddev start (requires sudo password)"
+  # Wait for user
+fi
+```
+
+---
+
+### 5. **Better Post-Setup Guidance**
+
+**Problem**: After setup, user doesn't know what to do next.
+
+**Solution**: Provide actionable next steps:
+
+```
+✅ Setup Complete!
+
+🌐 Your Site:
+   URL: https://project.ddev.site
+   One-time login: https://project.ddev.site/user/reset/...
+
+   Username: admin
+   Password: admin
+
+📝 Next Steps:
+
+   Development workflow:
+   • Make changes in Drupal UI
+   • Export config: ddev drush cex -y
+   • Commit: git add -A && git commit -m "message"
+
+   Common commands:
+   • ddev drush uli          # One-time login
+   • ddev drush cr           # Clear cache
+   • ddev launch             # Open in browser
+   • ddev drush watchdog:show # View logs
+
+📖 See README.md for more details
+```
+
+---
+
+### Priority Implementation Order
+
+1. **Authentication & Manual Steps** ⭐⭐⭐ - Affects every setup
+2. **Upfront Summary** ⭐⭐⭐ - Major UX improvement
+3. **Empty Config Detection** ⭐⭐ - Prevents wrong workflow
+4. **DDEV Sudo Detection** ⭐⭐ - Common pain point
+5. **Post-Setup Guidance** ⭐ - Better user experience
+
+---
+
+### Key Philosophy Change
+
+**Before**: Try everything, fail, ask user to fix
+**After**: Detect auth requirements upfront, guide user through manual steps, automate the rest smoothly
