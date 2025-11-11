@@ -21,11 +21,32 @@ This skill will enable Claude Code (web and local) to set up new Drupal projects
 - SQLite ✗
 - Drush (but can be installed via Composer) ⚠️
 
-### Key Constraint
+### Key Constraint - REVISED
 
-**Claude Code web CANNOT run a full Drupal installation** because there's no database server. This fundamentally changes our approach.
+**UPDATE**: Skills can install packages during initialization! This changes everything.
+
+**During Skill Loading:**
+- Can install Python packages (pip)
+- Can install Node.js packages (npm)
+- **May be able to install system packages** (apt-get) with proper permissions
+- Happens once when skill is first loaded, not at runtime
+
+**Critical Test Needed:**
+Can we install `php8.4-sqlite3` during skill initialization? If YES:
+- ✅ **Full Drupal installation in Claude Code web becomes possible!**
+- ✅ Use SQLite as database (file-based, no server needed)
+- ✅ Run actual drush commands
+- ✅ Export real configuration
+
+If NO:
+- Fall back to template-based approach OR
+- Use external cloud database (Railway, PlanetScale, Supabase)
 
 ## Proposed Architecture
+
+### Approach: Progressive Enhancement
+
+**Goal**: Attempt full Drupal installation via SQLite, fall back gracefully if not available.
 
 ### Phase 1: Template-Based Setup (MVP)
 
@@ -192,15 +213,17 @@ When the module is installed via `drush en mymodule`, this config is automatical
 ```
 .claude/skills/drupal-setup/
 ├── skill.md                 # Main skill file with instructions
-├── templates/
-│   ├── settings.php.tpl     # Organization settings.php template
-│   ├── gitignore.tpl        # .gitignore template
-│   ├── ddev-config.yaml.tpl # DDEV configuration template
-│   ├── README.md.tpl        # Project README template
-│   ├── CLAUDE.md.tpl        # Claude guidance template
-│   └── composer.json.tpl    # Composer template (if needed)
-└── README.md                # Documentation about the skill
+├── init.sh                  # Initialization script (attempts SQLite install)
+├── README.md                # Documentation about the skill
+└── templates/
+    ├── settings.php         # Organization settings.php template
+    ├── gitignore            # .gitignore template
+    ├── ddev-config.yaml     # DDEV configuration template
+    ├── README.md            # Project README template
+    └── CLAUDE.md            # Claude guidance template
 ```
+
+**Status**: ✅ Fully implemented and ready for testing!
 
 ## Future Enhancements
 
