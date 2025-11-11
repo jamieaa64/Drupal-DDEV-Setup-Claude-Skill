@@ -6,6 +6,182 @@ This document chronicles the development of the Drupal Setup Skill for Claude Co
 
 Create a Claude Code skill that automates Drupal project setup and ongoing development, working in both Claude Code CLI (local) and Web environments, following organizational best practices.
 
+## Next Steps
+
+### What We Definitely Want to Do
+
+**⚠️ CRITICAL: This skill has not been tested yet!**
+
+1. **Test in Claude Code CLI (with DDEV)**
+   - Test new project creation (Quick Mode)
+   - Test new project creation (Full Mode)
+   - Test existing project initial setup
+   - Test existing project update workflow
+   - Test existing project reset workflow
+   - Verify all generated files are correct
+   - Confirm DDEV commands execute successfully
+
+2. **Test in Claude Code Web (without DDEV)**
+   - Test new project creation (Quick Mode - should be same as CLI)
+   - Verify Full Mode falls back to Quick Mode if SQLite unavailable
+   - Test existing project workflows (should provide instructions, not run DDEV)
+   - Confirm composer commands work
+   - Verify template placeholder replacement
+
+3. **Fix Problems Found**
+   - Document any issues discovered during testing
+   - Fix bash command syntax errors (if any)
+   - Adjust user interaction flow if confusing
+   - Update templates if issues found
+   - Fix any git/composer command problems
+
+4. **Validate Generated Projects**
+   - Clone a project created by the skill
+   - Run `ddev start` and confirm it works
+   - Run `ddev drush site:install` and confirm success
+   - Test that configuration management works
+   - Verify team member can clone and set up
+
+5. **Edge Case Testing**
+   - Test with project names containing special characters
+   - Test network failures (composer/git)
+   - Test when GitHub repo doesn't exist
+   - Test when user cancels mid-way
+   - Test resume after failure
+
+### What We Might Want to Do
+
+These are potential enhancements to consider based on team needs and feedback:
+
+#### 1. **DevPanel Integration** (High Value)
+**Idea**: Push to GitHub triggers automatic deployment to DevPanel.
+
+**Thoughts**:
+- Would complete the workflow: Claude creates project → Push → Auto-deploy → Live site
+- Requires DevPanel API access
+- Could add DevPanel config files during project creation
+- Needs research on DevPanel's deployment hooks
+- **Priority**: High - closes the deployment gap
+
+#### 2. **Drupal.org Issue Integration** (Medium Value)
+**Idea**: Work with Drupal.org issues and create patches/merge requests.
+
+**Thoughts**:
+- Useful for contributing to Drupal core/contrib
+- Requires Drupal.org API access
+- Could automate: fetch issue → create branch → work → create patch
+- GitLab integration (d.o uses GitLab)
+- **Priority**: Medium - beneficial for open source contributors
+
+#### 3. **Multi-Environment Support** (Medium Value)
+**Idea**: Support dev/staging/prod configurations in one project.
+
+**Thoughts**:
+- Add `config/dev`, `config/staging`, `config/prod` directories
+- Use config_split module for environment-specific config
+- DDEV could have multiple configurations
+- More complex template structure
+- **Priority**: Medium - most projects need this eventually
+
+#### 4. **CI/CD Templates** (High Value)
+**Idea**: Generate GitHub Actions workflows for testing/deployment.
+
+**Thoughts**:
+- Add `.github/workflows/` directory with CI templates
+- Run PHPUnit, PHPCS, PHPStan on pull requests
+- Auto-deploy to DevPanel on merge to main
+- Could be optional during project creation
+- **Priority**: High - critical for production projects
+
+#### 5. **Custom Module Scaffolding** (Medium Value)
+**Idea**: Generate boilerplate for custom modules.
+
+**Thoughts**:
+- Add command: "Create a custom module called 'feature_name'"
+- Generate: `web/modules/custom/feature_name/`
+- Include: `.info.yml`, `.module`, `src/Controller/`, tests
+- Follow Drupal coding standards
+- **Priority**: Medium - speeds up development but not critical
+
+#### 6. **Testing Framework Setup** (Medium Value)
+**Idea**: Set up PHPUnit, Behat, and testing infrastructure.
+
+**Thoughts**:
+- Add `phpunit.xml` configuration
+- Set up Behat for functional testing
+- Add `tests/` directory structure
+- Include in CI/CD templates
+- **Priority**: Medium - important but can be added later
+
+#### 7. **Session Start Hook** (Low Value)
+**Idea**: Add SessionStart hook to projects created by this skill.
+
+**Thoughts**:
+- Projects would have `.claude/session-start.sh`
+- Auto-run `ddev start` when opening project in Claude Code
+- Could pre-load common drush commands
+- Convenience feature but not essential
+- **Priority**: Low - nice to have
+
+#### 8. **Project Validation/Linting** (Low Value)
+**Idea**: Validate generated projects meet quality standards.
+
+**Thoughts**:
+- Run PHPCS on generated code
+- Validate composer.json schema
+- Check DDEV config is valid
+- Lint YAML config files
+- **Priority**: Low - generated code should already be valid
+
+#### 9. **Enhanced init.sh** (Low Value)
+**Idea**: Make init.sh more robust and informative.
+
+**Thoughts**:
+- Better error handling
+- More detailed output about what's happening
+- Check for more prerequisites
+- Could attempt to fix common issues
+- **Priority**: Low - current version works for basic needs
+
+#### 10. **Migration from Existing Projects** (Medium-High Value)
+**Idea**: Take a non-standard Drupal project and migrate it to this structure.
+
+**Thoughts**:
+- Detect existing Drupal projects without proper structure
+- Offer to reorganize into standardized structure
+- Update settings.php, create DDEV config, etc.
+- Risky - could break existing projects
+- **Priority**: Medium-High - useful for onboarding legacy projects
+
+#### 11. **Module Update Notifications** (Low Value)
+**Idea**: Check for outdated modules and suggest updates.
+
+**Thoughts**:
+- Use `composer outdated` or `drush pm:security`
+- Notify about security updates
+- Could auto-create update PRs
+- **Priority**: Low - `composer outdated` already exists
+
+#### 12. **Performance Profiling Setup** (Low Value)
+**Idea**: Add XHProf, Blackfire, or Tideways configuration.
+
+**Thoughts**:
+- DDEV supports XHProf
+- Could add profiling config to DDEV
+- Useful for performance optimization
+- **Priority**: Low - advanced use case
+
+### Recommended Priorities
+
+Based on value and effort:
+
+1. **MUST DO FIRST**: Test and fix problems (above)
+2. **High Priority**: CI/CD templates + DevPanel integration
+3. **Medium Priority**: Multi-environment support, Migration from existing
+4. **Low Priority**: Everything else (nice-to-have)
+
+**Recommendation**: Focus on testing and stabilization first. Then add CI/CD + DevPanel integration as these provide the most value for production workflows. Other features should be driven by actual team needs.
+
 ## Timeline & Key Decisions
 
 ### Phase 1: Initial Investigation
