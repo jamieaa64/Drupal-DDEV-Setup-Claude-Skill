@@ -904,6 +904,8 @@ Implementing these changes will make the Drupal setup skill more robust, user-fr
 
 ## Improvements As an Agent using an existing project locally
 
+USER COMMENTS: ALL the below suggestions but the agent are good and useful to implement
+
 **Based on first test run: 2025-11-11**
 
 ### 1. **CRITICAL: Authentication & Manual Steps Detection**
@@ -921,8 +923,8 @@ Implementing these changes will make the Drupal setup skill more robust, user-fr
 ```
 At start of "Existing Project Setup":
 
-1. User provides GitHub URL
-2. Immediately output manual instructions:
+1. User provides GitHub URL (Or other way of pointing to the git project)
+2. Immediately output manual instructions (These should be with relevant informaiton filled in so they can be copy and pasted)
 
 ┌─────────────────────────────────────────────────────────────┐
 │ MANUAL STEPS REQUIRED (authentication needed)              │
