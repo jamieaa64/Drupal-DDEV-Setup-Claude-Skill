@@ -1,40 +1,76 @@
-# Drupal Project Setup Skill
+# Drupal Project Setup & Development Skill
 
-You are helping to set up a new Drupal project with best practices and organizational standards.
+You are helping with Drupal project setup and ongoing development with best practices and organizational standards.
 
 ## Capabilities
 
 This skill enables you to:
-- Set up a new Drupal 11 or Drupal CMS project (FAST - 30 seconds)
-- Configure the project with organizational best practices
-- Create deployment-ready structure for DDEV or DevPanel
-- Set up Git repository and push to GitHub
+- **Set up NEW Drupal projects** - Drupal 11 Core or Drupal CMS (FAST - 30 seconds)
+- **Set up EXISTING projects** - Onboard to projects created with this skill
+- **Maintain & update** - Keep local environment in sync with team changes
+- Configure with organizational best practices
+- Work in both Claude Code CLI (local) and Web environments
 - Generate comprehensive documentation
-- Optionally: Full Drupal installation for testing (SLOW - 5-8 minutes)
 
-## Default Mode: Template-Based (Recommended)
+## Scenario Detection
 
-**This skill defaults to TEMPLATE MODE for speed and efficiency:**
-- Creates project structure in ~30 seconds
-- No vendor bloat in workspace
-- Production-aligned (uses MySQL via DDEV, not SQLite)
-- Clean context window
-- Ready for immediate deployment
+**FIRST STEP: Detect the current scenario**
 
-**Full installation mode is available but should only be used when:**
-- You need to test complex configuration immediately
-- You're validating custom module behavior
-- You explicitly need a live Drupal instance
+Check the current directory:
 
-## Mode Selection
+```bash
+# Check for composer.json
+if [ -f "composer.json" ]; then
+  # Check if it's a Drupal project
+  if grep -q "drupal" composer.json; then
+    SCENARIO="EXISTING_PROJECT"
+  else
+    SCENARIO="NOT_DRUPAL"
+  fi
+else
+  SCENARIO="NEW_PROJECT"
+fi
 
-The skill will ask which mode to use:
-- **Quick Mode** (default, recommended): Template-based, fast setup
-- **Full Mode** (advanced): Install live Drupal with SQLite (requires SQLite extension)
+# Check environment capabilities
+if command -v ddev &> /dev/null; then
+  ENVIRONMENT="LOCAL_CLI"
+else
+  ENVIRONMENT="WEB"
+fi
+```
 
 ## User Interaction Flow
 
-When this skill is invoked, gather the following information from the user:
+### Scenario A: Existing Drupal Project
+
+**Detected: composer.json with Drupal dependencies exists**
+
+Ask the user what they want to do:
+```
+This looks like an existing Drupal project!
+
+What would you like to do?
+[1] Initial setup (first time working on this project)
+[2] Update after pulling changes (composer install, config import, etc.)
+[3] Reset local environment (fresh install)
+[4] Create new project instead
+
+Choice [1]:
+```
+
+**Option 1: Initial Setup** → Go to "Existing Project Setup" section below
+
+**Option 2: Update** → Go to "Update Existing Project" section below
+
+**Option 3: Reset** → Go to "Reset Local Environment" section below
+
+**Option 4: New Project** → Create new project in a different directory
+
+### Scenario B: New Drupal Project
+
+**Detected: No composer.json in current directory**
+
+Proceed with new project creation. Gather the following information:
 
 1. **Project name** (e.g., "my-drupal-site")
    - Must be valid directory name
@@ -255,6 +291,230 @@ When this skill is invoked, gather the following information from the user:
       ddev start
       ddev launch
     ```
+
+## Existing Project Workflows
+
+### Existing Project Setup (Initial)
+
+**Use case**: First time working on a project that was created with this skill.
+
+**Prerequisites**: Project has been cloned to local machine.
+
+#### If DDEV Available (Local CLI - Recommended):
+
+1. **Verify project structure**
+   ```bash
+   # Check for required files
+   ls -la composer.json .ddev/config.yaml config/sync
+   ```
+
+2. **Start DDEV**
+   ```bash
+   ddev start
+   ```
+
+3. **Install dependencies**
+   ```bash
+   ddev composer install
+   ```
+
+4. **Install Drupal**
+   ```bash
+   # Check if config exists
+   if [ -f "config/sync/core.extension.yml" ]; then
+     # Install from existing config
+     ddev drush site:install --existing-config --account-pass=admin -y
+   else
+     # Fresh install
+     ddev drush site:install --account-pass=admin -y
+     ddev drush config:export -y
+     echo "Note: Initial config exported. Consider committing config/sync/ directory."
+   fi
+   ```
+
+5. **Clear cache and launch**
+   ```bash
+   ddev drush cache:rebuild
+   ddev launch
+   ```
+
+6. **Report success**
+   ```
+   ✓ Environment set up successfully!
+   ✓ Site URL: [DDEV URL]
+   ✓ Login: admin / admin
+
+   Your local development environment is ready!
+
+   Common commands:
+   - ddev drush uli         # Get one-time login link
+   - ddev drush cr          # Clear cache
+   - ddev drush cex -y      # Export config
+   - ddev drush cim -y      # Import config
+   ```
+
+#### If DDEV NOT Available (Web):
+
+1. **Verify project structure**
+   ```bash
+   ls -la composer.json config/sync
+   ```
+
+2. **Install dependencies**
+   ```bash
+   composer install
+   ```
+
+3. **Report limitations**
+   ```
+   ✓ Dependencies installed
+   ⚠ DDEV not available - cannot install Drupal in this environment
+
+   To complete setup:
+   1. Work on configuration files and custom code here
+   2. Test locally with DDEV or on a server
+
+   When working without DDEV:
+   - Modify config YAML files in config/sync/
+   - Create/modify custom modules in web/modules/custom/
+   - Update composer.json for dependencies
+   - Push changes to Git
+   - Pull and test on a DDEV environment
+   ```
+
+### Update Existing Project
+
+**Use case**: Pulled latest changes from Git, need to sync local environment.
+
+#### If DDEV Available (Local CLI):
+
+1. **Update dependencies**
+   ```bash
+   ddev composer install
+   ```
+
+2. **Import configuration**
+   ```bash
+   ddev drush config:import -y
+   ```
+
+3. **Run database updates**
+   ```bash
+   ddev drush updb -y
+   ```
+
+4. **Clear cache**
+   ```bash
+   ddev drush cache:rebuild
+   ```
+
+5. **Report what was updated**
+   ```bash
+   # Show config changes
+   git diff HEAD~1 config/sync/ --name-only
+
+   # Show composer changes
+   git diff HEAD~1 composer.lock --name-only
+   ```
+
+6. **Report success**
+   ```
+   ✓ Environment updated successfully!
+
+   Changes applied:
+   - Dependencies updated (if composer.lock changed)
+   - Configuration imported (if config/sync/ changed)
+   - Database updates run
+   - Cache cleared
+
+   Your local environment is now in sync with the repository!
+   ```
+
+#### If DDEV NOT Available (Web):
+
+1. **Update dependencies**
+   ```bash
+   composer install
+   ```
+
+2. **Report what changed**
+   ```bash
+   git diff HEAD~1 config/sync/ --name-only
+   git diff HEAD~1 composer.json composer.lock
+   ```
+
+3. **Report limitations**
+   ```
+   ✓ Dependencies updated
+   ⚠ Configuration and database updates require DDEV
+
+   Configuration changes detected:
+   [List changed config files]
+
+   To complete update:
+   - Import config: ddev drush config:import -y
+   - Run updates: ddev drush updb -y
+   - Clear cache: ddev drush cache:rebuild
+   ```
+
+### Reset Local Environment
+
+**Use case**: Clean slate - reinstall Drupal from scratch with current config.
+
+#### If DDEV Available (Local CLI):
+
+1. **Stop and remove database**
+   ```bash
+   ddev stop
+   ddev delete -y
+   ```
+
+2. **Restart DDEV**
+   ```bash
+   ddev start
+   ```
+
+3. **Install dependencies**
+   ```bash
+   ddev composer install
+   ```
+
+4. **Reinstall Drupal**
+   ```bash
+   if [ -f "config/sync/core.extension.yml" ]; then
+     ddev drush site:install --existing-config --account-pass=admin -y
+   else
+     ddev drush site:install --account-pass=admin -y
+   fi
+   ```
+
+5. **Clear cache and launch**
+   ```bash
+   ddev drush cache:rebuild
+   ddev launch
+   ```
+
+6. **Report success**
+   ```
+   ✓ Environment reset complete!
+   ✓ Fresh Drupal installation with current configuration
+   ✓ Site URL: [DDEV URL]
+   ✓ Login: admin / admin
+   ```
+
+#### If DDEV NOT Available (Web):
+
+Report that reset requires DDEV:
+```
+⚠ Environment reset requires DDEV (local development environment)
+
+This operation needs to:
+1. Drop and recreate the database
+2. Reinstall Drupal
+3. Import configuration
+
+Please run this on a local machine with DDEV installed.
+```
 
 ## Templates
 

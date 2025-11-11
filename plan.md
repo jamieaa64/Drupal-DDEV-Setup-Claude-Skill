@@ -44,17 +44,23 @@ If NO:
 
 ## Proposed Architecture
 
-### Approach: Quick Mode First (Speed-Optimized)
+### Approach: Complete Development Lifecycle (Final)
 
-**FINAL DECISION**: Default to Quick Mode (template-based) for optimal speed and context efficiency.
+**EVOLUTION**: From setup-only tool to complete development lifecycle management.
 
-**Rationale:**
-- **Speed**: 30 seconds vs 5-8 minutes
-- **Context efficiency**: Clean workspace vs thousands of vendor files
-- **Production alignment**: DDEV/MySQL matches real deployment (SQLite doesn't)
-- **Token efficiency**: No bloat from Drupal core files
+**Capabilities:**
+1. **New Project Setup** - Quick Mode (default) or Full Mode (opt-in)
+2. **Existing Project Onboarding** - Auto-detect and setup
+3. **Ongoing Maintenance** - Update, sync, reset workflows
+4. **Environment-Aware** - Adapts to DDEV (local) or web
 
-**Full Mode available as opt-in** for advanced testing scenarios.
+**Key Decisions:**
+- **Quick Mode default** for new projects (speed: 30s vs 5-8min)
+- **Scenario detection** - Automatically detect existing vs new projects
+- **Environment detection** - Full automation with DDEV, guidance without
+- **Portable** - Same skill works in CLI and Web
+
+**This makes the skill valuable throughout the entire project lifecycle**, not just initialization.
 
 ### Phase 1: Template-Based Setup (MVP)
 
@@ -231,7 +237,43 @@ When the module is installed via `drush en mymodule`, this config is automatical
     └── CLAUDE.md            # Claude guidance template
 ```
 
-**Status**: ✅ Fully implemented and ready for testing!
+**Status**: ✅ Fully implemented with lifecycle management!
+
+## Lifecycle Workflows Implemented
+
+### Scenario Detection
+The skill automatically detects:
+- **New Project**: No composer.json → Create new Drupal project
+- **Existing Project**: composer.json with Drupal → Offer setup/update/reset options
+- **Environment**: DDEV available → Full automation / No DDEV → File operations + guidance
+
+### Existing Project Workflows
+
+**1. Initial Setup** (New team member onboarding)
+- Detect project structure
+- Start DDEV (if available)
+- Install composer dependencies
+- Install Drupal from existing config
+- Launch site
+
+**2. Update After Pull** (Keep environment in sync)
+- Update composer dependencies
+- Import configuration changes
+- Run database updates
+- Clear caches
+
+**3. Reset Environment** (Clean slate)
+- Delete database
+- Restart DDEV
+- Reinstall from current config
+- Fresh working environment
+
+### Benefits for Teams
+
+**Onboarding**: New developer productive in 2 minutes instead of hours
+**Consistency**: Everyone uses same workflow, same configuration
+**Maintenance**: Common tasks automated (no memorizing drush commands)
+**Flexibility**: Works locally (DDEV) and in web (file operations)
 
 ## Future Enhancements
 
