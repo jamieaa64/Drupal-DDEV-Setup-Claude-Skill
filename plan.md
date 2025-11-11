@@ -44,9 +44,17 @@ If NO:
 
 ## Proposed Architecture
 
-### Approach: Progressive Enhancement
+### Approach: Quick Mode First (Speed-Optimized)
 
-**Goal**: Attempt full Drupal installation via SQLite, fall back gracefully if not available.
+**FINAL DECISION**: Default to Quick Mode (template-based) for optimal speed and context efficiency.
+
+**Rationale:**
+- **Speed**: 30 seconds vs 5-8 minutes
+- **Context efficiency**: Clean workspace vs thousands of vendor files
+- **Production alignment**: DDEV/MySQL matches real deployment (SQLite doesn't)
+- **Token efficiency**: No bloat from Drupal core files
+
+**Full Mode available as opt-in** for advanced testing scenarios.
 
 ### Phase 1: Template-Based Setup (MVP)
 

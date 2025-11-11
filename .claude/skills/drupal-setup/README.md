@@ -4,10 +4,11 @@ A comprehensive Claude Code skill for setting up production-ready Drupal 11 and 
 
 ## Features
 
+- **Lightning-fast project setup** - Complete in ~30 seconds (Quick Mode)
 - **Automated project setup** with Drupal 11 Core or Drupal CMS
-- **Intelligent installation modes**:
-  - Full installation with SQLite (if available in environment)
-  - Template-based setup (fallback for restricted environments)
+- **Two modes**:
+  - **Quick Mode** (default, recommended): Template-based, fast, production-aligned
+  - **Full Mode** (optional, advanced): Live Drupal with SQLite for testing
 - **Best practice configuration**:
   - Organization-specific settings.php
   - Comprehensive .gitignore
@@ -57,39 +58,48 @@ Claude will guide you through:
 
 ## Installation Modes
 
-### Full Installation Mode (SQLite Available)
+### Quick Mode (Default, Recommended)
 
-When PHP SQLite extension is available, the skill will:
-- Create complete Drupal installation
-- Install Drupal using SQLite database
-- Enable and configure common modules
-- Export initial configuration to `config/sync/`
-- Create fully functional Drupal site
+**The skill defaults to Quick Mode for optimal performance:**
+- Creates project structure in ~30 seconds
+- Installs Composer dependencies
+- Generates all configuration files
+- Prepares for deployment with DDEV
+- **Clean workspace** - No vendor bloat
+- **Production-aligned** - MySQL via DDEV, not SQLite
+
+**Result**: Ready-to-deploy project that can be installed locally with DDEV in minutes.
+
+**When to use**:
+- ✅ Normal project setup (95% of use cases)
+- ✅ When speed matters
+- ✅ When working in Claude Code web
+
+### Full Mode (Advanced, Optional)
+
+**Only select Full Mode when explicitly needed:**
+- Creates complete Drupal installation with SQLite
+- Installs and configures Drupal live
+- Enables and configures common modules
+- Exports initial configuration
+- **Takes 5-8 minutes**
+- **Large workspace** - Thousands of vendor files
 
 **Result**: Immediately usable Drupal site with exported configuration.
 
-### Template Mode (SQLite Not Available)
+**When to use**:
+- Testing complex configuration immediately
+- Validating custom module behavior
+- Explicit need for live Drupal instance
 
-When SQLite is not available (common in restricted environments), the skill will:
-- Create project structure
-- Install Composer dependencies
-- Generate configuration files
-- Prepare for deployment
+## Mode Selection
 
-**Result**: Ready-to-deploy project that can be installed locally with DDEV.
-
-## Environment Detection
-
-The skill automatically detects capabilities by checking:
-
-```bash
-php -r "echo in_array('sqlite', PDO::getAvailableDrivers()) ? 'available' : 'not available';"
+The skill will prompt:
+```
+Setup mode: [1] Quick (recommended, ~30s) or [2] Full (advanced, ~5-8 min)? [1]
 ```
 
-- **SQLite available** → Full installation mode
-- **SQLite not available** → Template mode
-
-No user intervention required!
+Default is Quick Mode - just press Enter!
 
 ## What Gets Created
 
@@ -179,23 +189,7 @@ All modules are installed via Composer and enabled via Drush (in full install mo
 
 ## Next Steps After Creation
 
-### For Full Installation Mode
-
-Your site is ready! Just:
-
-```bash
-git clone <repo-url> project-name
-cd project-name
-# Site is already installed, just start developing!
-```
-
-To run locally with DDEV:
-```bash
-ddev start
-ddev launch
-```
-
-### For Template Mode
+### For Quick Mode (Default)
 
 Complete the installation locally:
 
@@ -214,6 +208,19 @@ git add config/sync
 git commit -m "Add initial configuration export"
 git push
 ```
+
+### For Full Mode (Advanced)
+
+Your site is already installed! To run locally with DDEV:
+
+```bash
+git clone <repo-url> project-name
+cd project-name
+ddev start
+ddev launch
+```
+
+The Drupal database and configuration are already in the repository.
 
 ## Customization
 
@@ -249,11 +256,13 @@ Check that:
 - `skill.md` exists and is readable
 - You're in a Claude Code environment
 
-### "SQLite not available" message
+### "SQLite not available" when selecting Full Mode
 
-This is normal for security-restricted environments. The skill will use template mode automatically.
+This is normal for security-restricted environments. The skill will automatically fall back to Quick Mode.
 
-To enable full installation mode, the environment needs:
+**Quick Mode is recommended anyway** for speed and efficiency. Only use Full Mode when you specifically need to test live Drupal.
+
+If you really need Full Mode, the environment requires:
 - PHP PDO SQLite extension
 - Permission to install system packages
 

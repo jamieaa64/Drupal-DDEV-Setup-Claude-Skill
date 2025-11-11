@@ -5,23 +5,32 @@ You are helping to set up a new Drupal project with best practices and organizat
 ## Capabilities
 
 This skill enables you to:
-- Set up a new Drupal 11 or Drupal CMS project
+- Set up a new Drupal 11 or Drupal CMS project (FAST - 30 seconds)
 - Configure the project with organizational best practices
-- Attempt full Drupal installation using SQLite (if available)
-- Fall back to template-based approach if SQLite unavailable
+- Create deployment-ready structure for DDEV or DevPanel
 - Set up Git repository and push to GitHub
 - Generate comprehensive documentation
+- Optionally: Full Drupal installation for testing (SLOW - 5-8 minutes)
 
-## Prerequisites Check
+## Default Mode: Template-Based (Recommended)
 
-Before starting, check if SQLite support is available:
+**This skill defaults to TEMPLATE MODE for speed and efficiency:**
+- Creates project structure in ~30 seconds
+- No vendor bloat in workspace
+- Production-aligned (uses MySQL via DDEV, not SQLite)
+- Clean context window
+- Ready for immediate deployment
 
-```bash
-php -r "echo in_array('sqlite', PDO::getAvailableDrivers()) ? 'SQLite available' : 'SQLite NOT available';"
-```
+**Full installation mode is available but should only be used when:**
+- You need to test complex configuration immediately
+- You're validating custom module behavior
+- You explicitly need a live Drupal instance
 
-If SQLite is available, you can do a **full installation** with live Drupal.
-If not available, use the **template-based approach** (prepare files for later deployment).
+## Mode Selection
+
+The skill will ask which mode to use:
+- **Quick Mode** (default, recommended): Template-based, fast setup
+- **Full Mode** (advanced): Install live Drupal with SQLite (requires SQLite extension)
 
 ## User Interaction Flow
 
@@ -36,9 +45,13 @@ When this skill is invoked, gather the following information from the user:
    - `2` - Drupal CMS (Full-featured with recipes)
    - `3` - Drupal 11 Minimal
 
-3. **Installation mode** (auto-detect based on SQLite availability):
-   - If SQLite available: "Full installation (with live Drupal)"
-   - If SQLite NOT available: "Template mode (prepare for deployment)"
+3. **Setup mode** (default to Quick Mode):
+   - Ask: "Setup mode: [1] Quick (recommended, ~30s) or [2] Full (advanced, ~5-8 min)? [1]"
+   - Default: Quick Mode (template-based)
+   - If user selects Full Mode:
+     - Check SQLite availability: `php -r "exit(in_array('sqlite', PDO::getAvailableDrivers()) ? 0 : 1);"`
+     - If SQLite NOT available: "SQLite not available. Falling back to Quick Mode."
+     - If SQLite available: Proceed with Full Mode
 
 4. **GitHub repository**:
    - Ask if they want to create new repo or use existing
@@ -49,13 +62,15 @@ When this skill is invoked, gather the following information from the user:
    - Ask: "Include common contributed modules? (Admin Toolbar, Gin, Pathauto, etc.) [Y/n]"
    - Default: Yes
 
-6. **Admin credentials** (if full installation):
+6. **Admin credentials** (only if Full Mode):
    - Username: default "admin"
    - Password: default "admin" (they can change later)
 
 ## Installation Process
 
-### Full Installation Mode (SQLite Available)
+### Quick Mode (Default, Recommended)
+
+**Use this mode for normal project setup. It's FAST (~30 seconds) and creates a production-ready structure.**
 
 1. **Create project directory**
    ```bash
@@ -94,42 +109,15 @@ When this skill is invoked, gather the following information from the user:
 
 7. **Create settings.local.php** (empty file for local overrides)
 
-8. **Install Drupal with SQLite**
-   ```bash
-   ./vendor/bin/drush site:install standard \
-     --db-url=sqlite://sites/default/files/.ht.sqlite \
-     --site-name="<project-name>" \
-     --account-name=admin \
-     --account-pass=admin \
-     --yes
-   ```
+8. **Create .gitignore** (use template from templates/gitignore)
 
-9. **Enable common modules** (if installed)
-   ```bash
-   ./vendor/bin/drush en admin_toolbar admin_toolbar_tools gin gin_toolbar \
-     pathauto redirect simple_sitemap metatag -y
-   ```
+9. **Create DDEV config** (use template from templates/ddev-config.yaml → .ddev/config.yaml)
 
-10. **Set Gin as admin theme**
-    ```bash
-    ./vendor/bin/drush config:set system.theme admin gin -y
-    ./vendor/bin/drush config:set node.settings use_admin_theme true -y
-    ```
+10. **Create documentation**
+    - README.md (use template from templates/README.md)
+    - CLAUDE.md (use template from templates/CLAUDE.md)
 
-11. **Export initial configuration**
-    ```bash
-    ./vendor/bin/drush config:export -y
-    ```
-
-12. **Create .gitignore** (use template)
-
-13. **Create DDEV config** (use template)
-
-14. **Create documentation**
-    - README.md (use template)
-    - CLAUDE.md (use template)
-
-15. **Initialize Git and push**
+11. **Initialize Git and push**
     ```bash
     git init
     git add .
@@ -139,29 +127,7 @@ When this skill is invoked, gather the following information from the user:
     git push -u origin main
     ```
 
-16. **Report success with next steps**
-
-### Template Mode (SQLite NOT Available)
-
-1. **Create project directory**
-   ```bash
-   mkdir <project-name>
-   cd <project-name>
-   ```
-
-2. **Initialize Composer project** (same as above)
-
-3. **Install Drush and modules** (same as above)
-
-4. **Create directory structure** (same as above)
-
-5. **Create configuration files** (same as above)
-
-6. **Create .gitignore, DDEV config, documentation** (same as above)
-
-7. **Initialize Git and push** (same as above)
-
-8. **Report what needs to be done next**:
+12. **Report what needs to be done next**:
    ```
    Project structure created! To complete the setup:
 
@@ -183,6 +149,112 @@ When this skill is invoked, gather the following information from the user:
       git commit -m "Add initial configuration export"
       git push
    ```
+
+### Full Mode (Advanced, Optional)
+
+**Only use this mode when you need to test complex configuration or validate custom modules immediately.**
+**Warning: This is SLOW (5-8 minutes) and creates large vendor directory in workspace.**
+
+1. **Verify SQLite is available**
+   ```bash
+   php -r "exit(in_array('sqlite', PDO::getAvailableDrivers()) ? 0 : 1);"
+   ```
+   If this fails, fall back to Quick Mode.
+
+2. **Create project directory**
+   ```bash
+   mkdir <project-name>
+   cd <project-name>
+   ```
+
+3. **Initialize Composer project**
+   ```bash
+   # For Drupal 11
+   composer create-project drupal/recommended-project:^11 . --no-interaction
+
+   # For Drupal CMS
+   composer create-project drupal/cms . --no-interaction
+   ```
+
+4. **Install Drush**
+   ```bash
+   composer require drush/drush --no-interaction
+   ```
+
+5. **Install common modules** (if requested)
+   ```bash
+   composer require drupal/admin_toolbar drupal/gin drupal/gin_toolbar \
+     drupal/pathauto drupal/redirect drupal/simple_sitemap \
+     drupal/metatag drupal/config_split --no-interaction
+   ```
+
+6. **Create directory structure**
+   ```bash
+   mkdir -p config/sync
+   mkdir -p private
+   ```
+
+7. **Create settings.php** (use template from templates/settings.php)
+
+8. **Create settings.local.php** (empty file for local overrides)
+
+9. **Install Drupal with SQLite**
+   ```bash
+   ./vendor/bin/drush site:install standard \
+     --db-url=sqlite://sites/default/files/.ht.sqlite \
+     --site-name="<project-name>" \
+     --account-name=admin \
+     --account-pass=admin \
+     --yes
+   ```
+
+10. **Enable common modules** (if installed)
+    ```bash
+    ./vendor/bin/drush en admin_toolbar admin_toolbar_tools gin gin_toolbar \
+      pathauto redirect simple_sitemap metatag -y
+    ```
+
+11. **Set Gin as admin theme**
+    ```bash
+    ./vendor/bin/drush config:set system.theme admin gin -y
+    ./vendor/bin/drush config:set node.settings use_admin_theme true -y
+    ```
+
+12. **Export initial configuration**
+    ```bash
+    ./vendor/bin/drush config:export -y
+    ```
+
+13. **Create .gitignore** (use template)
+
+14. **Create DDEV config** (use template)
+
+15. **Create documentation**
+    - README.md (use template)
+    - CLAUDE.md (use template)
+
+16. **Initialize Git and push**
+    ```bash
+    git init
+    git add .
+    git commit -m "Initial Drupal project setup via Claude Code (Full Mode)"
+    git remote add origin <github-url>
+    git branch -M main
+    git push -u origin main
+    ```
+
+17. **Report success**
+    ```
+    ✓ Drupal installed successfully!
+    ✓ Configuration exported to config/sync/
+    ✓ Pushed to GitHub: <github-url>
+
+    Your site is ready. To access it locally with DDEV:
+      git clone <github-url> <project-name>
+      cd <project-name>
+      ddev start
+      ddev launch
+    ```
 
 ## Templates
 
