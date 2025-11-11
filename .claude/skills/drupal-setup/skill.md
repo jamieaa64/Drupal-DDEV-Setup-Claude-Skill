@@ -1,3 +1,9 @@
+---
+name: drupal-setup
+description: Complete Drupal development lifecycle - setup, onboarding, and maintenance
+version: 1.0.0
+---
+
 # Drupal Project Setup & Development Skill
 
 You are helping with Drupal project setup and ongoing development with best practices and organizational standards.
