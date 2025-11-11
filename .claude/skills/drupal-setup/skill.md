@@ -81,9 +81,9 @@ Proceed with new project creation. Gather the following information:
    - Must be valid directory name
    - Will be used for Git repository name
 
-2. **Drupal variant**:
-   - `1` - Drupal 11 Core (Standard)
-   - `2` - Drupal CMS (Full-featured with recipes)
+2. **Drupal variant** (ALWAYS ask the user which variant):
+   - `1` - Drupal CMS (Full-featured with recipes) [RECOMMENDED DEFAULT]
+   - `2` - Drupal 11 Core (Standard)
    - `3` - Drupal 11 Minimal
 
 3. **Setup mode** (default to Quick Mode):
@@ -303,60 +303,139 @@ Proceed with new project creation. Gather the following information:
 
 **Use case**: First time working on a project that was created with this skill.
 
-**Prerequisites**: Project has been cloned to local machine.
+**IMPORTANT**: This workflow requires manual steps for authentication. Do NOT attempt to run git clone or ddev start automatically.
 
 #### If DDEV Available (Local CLI - Recommended):
 
-1. **Verify project structure**
-   ```bash
-   # Check for required files
-   ls -la composer.json .ddev/config.yaml config/sync
-   ```
+**Step 1: Show upfront summary and manual steps**
 
-2. **Start DDEV**
-   ```bash
-   ddev start
-   ```
+First, ask the user for the GitHub repository URL and desired project directory. Then immediately display:
 
-3. **Install dependencies**
-   ```bash
-   ddev composer install
-   ```
+```
+Drupal Project Setup Plan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-4. **Install Drupal**
-   ```bash
-   # Check if config exists
-   if [ -f "config/sync/core.extension.yml" ]; then
-     # Install from existing config
-     ddev drush site:install --existing-config --account-pass=admin -y
-   else
-     # Fresh install
-     ddev drush site:install --account-pass=admin -y
-     ddev drush config:export -y
-     echo "Note: Initial config exported. Consider committing config/sync/ directory."
-   fi
-   ```
+📋 MANUAL STEPS (you):
+   [ ] 1. Clone repository (authentication required)
+   [ ] 2. Start DDEV (sudo password required)
 
-5. **Clear cache and launch**
-   ```bash
-   ddev drush cache:rebuild
-   ddev launch
-   ```
+🤖 AUTOMATED STEPS (me):
+   [ ] 3. Verify project structure
+   [ ] 4. Install Composer dependencies (~2-3 min)
+   [ ] 5. Install Drupal
+   [ ] 6. Export configuration (if needed)
+   [ ] 7. Provide access details
 
-6. **Report success**
-   ```
-   ✓ Environment set up successfully!
-   ✓ Site URL: [DDEV URL]
-   ✓ Login: admin / admin
+Estimated time: ~5 minutes
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   Your local development environment is ready!
+┌─────────────────────────────────────────────────────────────┐
+│ MANUAL STEPS REQUIRED (authentication needed)              │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ Please run these commands:                                  │
+│                                                             │
+│ 1. Clone repository:                                        │
+│    cd <parent-directory>                                    │
+│    git clone <github-url> <project-directory>              │
+│    cd <project-directory>                                   │
+│                                                             │
+│ 2. Start DDEV (requires sudo):                             │
+│    ddev start                                              │
+│                                                             │
+│ Type 'done' when complete                                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Step 2: Wait for user confirmation**
+
+Wait for the user to type 'done' before proceeding.
+
+**Step 3: Verify DDEV is running**
+
+```bash
+# Check if DDEV is running
+ddev describe
+```
+
+If this fails, prompt user to run `ddev start` again.
+
+**Step 4: Verify project structure**
+```bash
+# Check for required files
+ls -la composer.json .ddev/config.yaml config/sync
+```
+
+**Step 5: Install dependencies**
+```bash
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "📦 Installing Composer dependencies (~2-3 minutes)..."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+ddev composer install
+```
+
+**Step 6: Install Drupal (with empty config detection)**
+```bash
+# Check if config exists and has actual content
+if [ -f "config/sync/core.extension.yml" ]; then
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "✓ Found existing configuration"
+  echo "🔧 Installing Drupal from existing config..."
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  ddev drush site:install --existing-config --account-pass=admin -y
+else
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "ℹ No configuration found - performing fresh install"
+  echo "🔧 Installing Drupal..."
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  ddev drush site:install --account-pass=admin -y
+  ddev drush config:export -y
+  echo "Note: Initial config exported. Consider committing config/sync/ directory."
+fi
+```
+
+**Step 7: Clear cache and get site details**
+```bash
+ddev drush cache:rebuild
+
+# Get the site URL
+SITE_URL=$(ddev describe | grep -oP 'https://[^ ]+' | head -1)
+
+# Get one-time login link
+ULI=$(ddev drush uli)
+```
+
+**Step 8: Report success with actionable next steps**
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Setup Complete!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🌐 Your Site:
+   URL: <SITE_URL>
+   One-time login: <SITE_URL><ULI>
+
+   Username: admin
+   Password: admin
+
+📝 Next Steps:
+
+   Development workflow:
+   • Make changes in Drupal UI
+   • Export config: ddev drush cex -y
+   • Commit: git add -A && git commit -m "message"
+   • Push: git push
 
    Common commands:
-   - ddev drush uli         # Get one-time login link
-   - ddev drush cr          # Clear cache
-   - ddev drush cex -y      # Export config
-   - ddev drush cim -y      # Import config
-   ```
+   • ddev drush uli          # One-time login
+   • ddev drush cr           # Clear cache
+   • ddev launch             # Open in browser
+   • ddev drush watchdog:show # View logs
+   • ddev drush status       # Check Drupal status
+
+📖 See README.md for more details
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
 
 #### If DDEV NOT Available (Web):
 
@@ -484,27 +563,57 @@ Proceed with new project creation. Gather the following information:
    ddev composer install
    ```
 
-4. **Reinstall Drupal**
+4. **Reinstall Drupal (with empty config detection)**
    ```bash
+   # Check if config exists and has actual content
    if [ -f "config/sync/core.extension.yml" ]; then
+     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+     echo "✓ Found existing configuration"
+     echo "🔧 Reinstalling Drupal from existing config..."
+     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
      ddev drush site:install --existing-config --account-pass=admin -y
    else
+     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+     echo "ℹ No configuration found - performing fresh install"
+     echo "🔧 Installing Drupal..."
+     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
      ddev drush site:install --account-pass=admin -y
+     ddev drush config:export -y
+     echo "Note: Initial config exported. Consider committing config/sync/ directory."
    fi
    ```
 
-5. **Clear cache and launch**
+5. **Clear cache and get site details**
    ```bash
    ddev drush cache:rebuild
-   ddev launch
+
+   # Get the site URL
+   SITE_URL=$(ddev describe | grep -oP 'https://[^ ]+' | head -1)
+
+   # Get one-time login link
+   ULI=$(ddev drush uli)
    ```
 
-6. **Report success**
+6. **Report success with actionable next steps**
    ```
-   ✓ Environment reset complete!
-   ✓ Fresh Drupal installation with current configuration
-   ✓ Site URL: [DDEV URL]
-   ✓ Login: admin / admin
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ✅ Environment Reset Complete!
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   🌐 Your Site:
+      URL: <SITE_URL>
+      One-time login: <SITE_URL><ULI>
+
+      Username: admin
+      Password: admin
+
+   📝 Next Steps:
+
+      • ddev launch             # Open in browser
+      • ddev drush uli          # Get new one-time login
+      • ddev drush status       # Check Drupal status
+
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    ```
 
 #### If DDEV NOT Available (Web):
