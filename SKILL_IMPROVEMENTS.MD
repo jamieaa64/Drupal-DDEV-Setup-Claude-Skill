@@ -1,0 +1,1085 @@
+# Drupal Setup Skill - Improvement Recommendations
+
+Based on testing the Drupal setup skill in a production scenario, here are recommended improvements to enhance the skill's effectiveness.
+
+## Critical Issues to Fix
+
+### 1. `.gitignore` Precision Problem
+
+**Issue**: The standard Drupal `.gitignore` templates use overly broad patterns that block important files from being committed.
+
+**Problematic Patterns**:
+```gitignore
+# PROBLEM: These patterns are too broad
+/web/sites/*/*settings*.php  # Blocks ALL settings files including settings.php
+/drush                        # Blocks the entire drush config directory
+```
+
+**Recommendation**: Generate a more precise `.gitignore` that explicitly:
+- Allows `settings.php` but blocks `settings.local.php` and `settings.ddev.php`
+- Allows the `drush/` directory but blocks drush binaries in root
+- Has clear comments explaining what gets committed vs ignored
+
+**Suggested `.gitignore` Pattern**:
+```gitignore
+# Ignore configuration files that may contain sensitive information
+# Allow settings.php but ignore local overrides
+/web/sites/*/settings.local.php
+/web/sites/*/*services*.yml
+# Ignore auto-generated settings files
+/web/sites/*/settings.ddev.php
+
+# ... other patterns ...
+
+# Ignore vendor dependencies and scripts
+/vendor
+/composer.phar
+/robo.phar
+/drush.phar
+/drupal.phar
+
+# Ignore these binaries only if in root (not directories)
+# Note: /drush/ directory is for configs and should be committed
+```
+
+---
+
+## Essential Missing Files
+
+### 2. `.editorconfig`
+
+**Why**: Ensures consistent coding standards across different IDEs and editors.
+
+**Suggested File**:
+```ini
+root = true
+
+[*]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.php]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.yml]
+indent_size = 2
+```
+
+### 3. `.gitattributes`
+
+**Why**: Ensures line ending consistency across different operating systems.
+
+**Suggested File**:
+```gitattributes
+* text=auto
+*.php text eol=lf
+*.module text eol=lf
+*.inc text eol=lf
+*.install text eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
+```
+
+---
+
+## Directory Structure Enhancements
+
+### 4. Add Placeholder Documentation in Key Directories
+
+Create README files to guide developers on where to place custom code:
+
+**`web/modules/custom/README.md`**:
+```markdown
+# Custom Modules
+
+Place your custom Drupal modules in this directory.
+
+## Structure
+
+Each module should have its own directory:
+```
+custom/
+├── my_module/
+│   ├── my_module.info.yml
+│   ├── my_module.module
+│   └── src/
+└── another_module/
+    └── ...
+```
+
+## Creating a New Module
+
+```bash
+ddev drush generate module
+```
+
+Or manually create the directory and required files following [Drupal module standards](https://www.drupal.org/docs/creating-custom-modules).
+```
+
+**`web/themes/custom/README.md`**:
+```markdown
+# Custom Themes
+
+Place your custom Drupal themes in this directory.
+
+## Structure
+
+Each theme should have its own directory:
+```
+custom/
+├── my_theme/
+│   ├── my_theme.info.yml
+│   ├── my_theme.theme
+│   ├── css/
+│   ├── js/
+│   └── templates/
+```
+
+## Creating a New Theme
+
+```bash
+ddev drush generate theme
+```
+
+Or use a starter theme like [Olivero](https://www.drupal.org/project/olivero) as a base.
+```
+
+**`web/libraries/README.md`**:
+```markdown
+# Third-Party Libraries
+
+Place third-party JavaScript libraries and other assets here.
+
+Examples:
+- CKEditor plugins
+- jQuery plugins
+- JavaScript frameworks
+- CSS frameworks (not managed by npm/composer)
+
+Most modern libraries should be managed via Composer or npm when possible.
+```
+
+---
+
+## DDEV Enhancements
+
+### 5. Custom DDEV Commands
+
+**File**: `.ddev/commands/web/drupal-install`
+
+```bash
+#!/bin/bash
+
+## Description: Quick Drupal installation with SQLite and sensible defaults
+## Usage: drupal-install [profile]
+## Example: ddev drupal-install
+## Example: ddev drupal-install minimal
+
+PROFILE=${1:-standard}
+
+drush site:install "$PROFILE" \
+  --db-url=sqlite://sites/default/files/.sqlite \
+  --account-name=admin \
+  --account-pass=admin \
+  --site-name="Drupal Development Site" \
+  -y
+
+echo ""
+echo "✓ Installation complete!"
+echo "  Username: admin"
+echo "  Password: admin"
+echo ""
+echo "Run 'ddev launch' to open the site in your browser."
+```
+
+**File**: `.ddev/commands/web/drupal-reset`
+
+```bash
+#!/bin/bash
+
+## Description: Reset Drupal database and reinstall
+## Usage: drupal-reset [profile]
+## Example: ddev drupal-reset
+
+PROFILE=${1:-standard}
+
+echo "⚠️  This will delete your current database!"
+read -p "Are you sure? (y/N) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]
+then
+    drush sql-drop -y
+    drush site:install "$PROFILE" \
+      --db-url=sqlite://sites/default/files/.sqlite \
+      --account-name=admin \
+      --account-pass=admin \
+      --site-name="Drupal Development Site" \
+      -y
+
+    echo ""
+    echo "✓ Reset complete!"
+fi
+```
+
+### 6. DDEV Post-Start Hook
+
+**Addition to `.ddev/config.yaml`**:
+```yaml
+hooks:
+  post-start:
+    - exec: |
+        if [ -f "web/core/lib/Drupal.php" ]; then
+          echo "Drupal status:"
+          drush status --fields=drupal-version,bootstrap || true
+        else
+          echo "⚠️  Drupal not installed. Run 'ddev composer install' first."
+        fi
+```
+
+---
+
+## Documentation Improvements
+
+### 7. TROUBLESHOOTING.md
+
+Create a dedicated troubleshooting guide:
+
+```markdown
+# Troubleshooting Guide
+
+## DDEV Issues
+
+### Port Conflicts
+
+**Symptom**: `ddev start` fails with "port already allocated" error
+
+**Solutions**:
+1. Check what's using port 80/443:
+   ```bash
+   sudo lsof -i :80
+   sudo lsof -i :443
+   ```
+
+2. Stop conflicting services (macOS):
+   ```bash
+   sudo apachectl stop
+   ```
+
+3. Or configure DDEV to use different ports:
+   ```bash
+   ddev config --router-http-port=8080 --router-https-port=8443
+   ddev restart
+   ```
+
+### Docker Issues
+
+**Symptom**: DDEV won't start, Docker errors
+
+**Solutions**:
+1. Restart Docker Desktop
+2. Update DDEV: `brew upgrade ddev`
+3. Clean up Docker: `ddev clean --all`
+
+## Composer Issues
+
+### Memory Exhausted
+
+**Symptom**: `Fatal error: Allowed memory size exhausted`
+
+**Solution**:
+```bash
+ddev composer install --no-dev
+# or
+ddev exec php -d memory_limit=-1 /usr/local/bin/composer install
+```
+
+### Package Conflicts
+
+**Symptom**: Unable to resolve dependencies
+
+**Solution**:
+```bash
+ddev composer clear-cache
+ddev composer update --lock
+```
+
+## Drupal Issues
+
+### White Screen of Death (WSOD)
+
+**Solutions**:
+1. Check logs:
+   ```bash
+   ddev logs
+   ddev drush watchdog:show
+   ```
+
+2. Enable error display in `settings.local.php`:
+   ```php
+   $config['system.logging']['error_level'] = 'verbose';
+   ```
+
+3. Clear cache:
+   ```bash
+   ddev drush cr
+   ```
+
+### Permission Errors
+
+**Solution**:
+```bash
+ddev exec chmod -R 777 web/sites/default/files
+```
+
+### Configuration Import Fails
+
+**Symptom**: `drush cim` fails with various errors
+
+**Solutions**:
+1. Check for UUID mismatches:
+   ```bash
+   ddev drush config:get system.site uuid
+   # Compare with config/sync/system.site.yml
+   ```
+
+2. Force import:
+   ```bash
+   ddev drush cim -y --partial
+   ```
+
+### Database Connection Errors
+
+**Solutions**:
+1. Restart DDEV: `ddev restart`
+2. Check database status: `ddev describe`
+3. Test connection: `ddev drush sql:cli`
+
+## Performance Issues
+
+### Slow Page Loads
+
+**Solutions**:
+1. Disable XDebug when not needed:
+   ```bash
+   ddev xdebug off
+   ```
+
+2. Enable caching in development (settings.local.php):
+   ```php
+   // Comment out these lines
+   // $settings['cache']['bins']['render'] = 'cache.backend.null';
+   // $settings['cache']['bins']['dynamic_page_cache'] = 'cache.backend.null';
+   ```
+
+3. Use SQLite for faster development:
+   ```bash
+   ddev drush site:install --db-url=sqlite://sites/default/files/.sqlite
+   ```
+
+## SQLite vs MariaDB
+
+### When to Use SQLite
+
+**Pros**:
+- 10x faster installation
+- No separate database container
+- Perfect for development/testing
+- Easy to reset
+
+**Cons**:
+- Not recommended for production
+- Limited concurrent connections
+- Some contrib modules may have issues
+
+### When to Use MariaDB
+
+**Pros**:
+- Production-like environment
+- Better for complex queries
+- Full transaction support
+
+**Cons**:
+- Slower installation
+- More resources needed
+
+### Switching Between Databases
+
+**To SQLite**:
+```bash
+ddev drush sql-drop -y
+ddev drush site:install --db-url=sqlite://sites/default/files/.sqlite --account-name=admin --account-pass=admin -y
+```
+
+**To MariaDB**:
+```bash
+ddev drush sql-drop -y
+ddev drush site:install --account-name=admin --account-pass=admin -y
+```
+
+## Getting More Help
+
+- Check DDEV logs: `ddev logs`
+- Check Drupal logs: `ddev drush watchdog:show`
+- DDEV support: https://ddev.readthedocs.io/
+- Drupal support: https://www.drupal.org/support
+```
+
+### 8. README.md Enhancement: Database Snapshots
+
+Add this section to README.md:
+
+```markdown
+## Database Snapshots
+
+DDEV allows you to save and restore database states, perfect for testing:
+
+### Create a Snapshot
+
+```bash
+ddev snapshot
+# or with a name
+ddev snapshot --name=before-update
+```
+
+### List Snapshots
+
+```bash
+ddev snapshot --list
+```
+
+### Restore a Snapshot
+
+```bash
+ddev snapshot restore --latest
+# or by name
+ddev snapshot restore --name=before-update
+```
+
+This is incredibly useful before:
+- Testing module updates
+- Trying experimental features
+- Running database migrations
+- Making major configuration changes
+```
+
+---
+
+## Configuration File Enhancements
+
+### 9. Enhanced `settings.php`
+
+Add these commented examples after the main configuration:
+
+```php
+// ============================================================================
+// ADVANCED CONFIGURATION EXAMPLES
+// Uncomment and customize as needed
+// ============================================================================
+
+// Redis caching (requires redis service in DDEV)
+// if (extension_loaded('redis')) {
+//   $settings['redis.connection']['interface'] = 'PhpRedis';
+//   $settings['redis.connection']['host'] = 'redis';
+//   $settings['cache']['default'] = 'cache.backend.redis';
+//   $settings['cache']['bins']['bootstrap'] = 'cache.backend.chainedfast';
+//   $settings['cache']['bins']['discovery'] = 'cache.backend.chainedfast';
+//   $settings['cache']['bins']['config'] = 'cache.backend.chainedfast';
+// }
+
+// Reverse proxy configuration (for production behind load balancers)
+// $settings['reverse_proxy'] = TRUE;
+// $settings['reverse_proxy_addresses'] = ['127.0.0.1', '10.0.0.0/8'];
+// $settings['reverse_proxy_trusted_headers'] =
+//   \Symfony\Component\HttpFoundation\Request::HEADER_X_FORWARDED_ALL;
+
+// Private files directory (outside web root for security)
+// $settings['file_private_path'] = '../private';
+
+// Temporary directory
+// $settings['file_temp_path'] = '/tmp';
+
+// Environment indicator (useful for distinguishing dev/stage/prod)
+// $config['environment_indicator.indicator']['name'] = 'Development';
+// $config['environment_indicator.indicator']['bg_color'] = '#0073ea';
+// $config['environment_indicator.indicator']['fg_color'] = '#ffffff';
+
+// Disable CSS/JS aggregation in development
+// $config['system.performance']['css']['preprocess'] = FALSE;
+// $config['system.performance']['js']['preprocess'] = FALSE;
+```
+
+### 10. Enhanced `composer.json`
+
+Add these useful development dependencies and scripts:
+
+```json
+{
+  "require-dev": {
+    "drupal/core-dev": "^10.2",
+    "drupal/devel": "^5.0",
+    "drupal/devel_php": "^1.5",
+    "phpstan/phpstan": "^1.10",
+    "phpstan/phpstan-deprecation-rules": "^1.1",
+    "mglaman/phpstan-drupal": "^1.2",
+    "palantirnet/drupal-rector": "^0.20",
+    "squizlabs/php_codesniffer": "^3.7",
+    "drupal/coder": "^8.3"
+  },
+  "scripts": {
+    "test": [
+      "phpunit --configuration web/core/phpunit.xml.dist --testdox"
+    ],
+    "test:unit": [
+      "phpunit --configuration web/core/phpunit.xml.dist --testsuite=unit"
+    ],
+    "lint": [
+      "phpcs --standard=Drupal,DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md,yml web/modules/custom web/themes/custom"
+    ],
+    "lint:fix": [
+      "phpcbf --standard=Drupal,DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md,yml web/modules/custom web/themes/custom"
+    ],
+    "analyze": [
+      "phpstan analyse web/modules/custom web/themes/custom"
+    ],
+    "post-install-cmd": [
+      "@php -r \"if (!file_exists('web/core')) {echo '\\n\\nRun `ddev drush site:install` to complete setup.\\n\\n';}\"",
+      "@php -r \"if (!file_exists('.git/hooks/pre-commit')) {echo '\\nConsider setting up git hooks for code quality checks.\\n';}\""
+    ]
+  },
+  "scripts-descriptions": {
+    "test": "Run PHPUnit tests",
+    "test:unit": "Run only unit tests",
+    "lint": "Check code style compliance",
+    "lint:fix": "Automatically fix code style issues",
+    "analyze": "Run static analysis with PHPStan"
+  }
+}
+```
+
+---
+
+## Quality of Life Scripts
+
+### 11. Helper Scripts
+
+**File**: `scripts/reset.sh`
+
+```bash
+#!/bin/bash
+set -e
+
+echo "🔄 Resetting Drupal environment..."
+echo ""
+echo "This will:"
+echo "  - Stop and delete the current DDEV project"
+echo "  - Start fresh containers"
+echo "  - Install dependencies"
+echo "  - Install a fresh Drupal site"
+echo ""
+read -p "Continue? (y/N) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]
+then
+    echo "Cancelled."
+    exit 1
+fi
+
+echo "⏳ Stopping and cleaning..."
+ddev stop
+ddev delete -O -y
+
+echo "⏳ Starting fresh..."
+ddev start
+
+echo "⏳ Installing dependencies..."
+ddev composer install
+
+echo "⏳ Installing Drupal..."
+ddev drush site:install standard \
+  --db-url=sqlite://sites/default/files/.sqlite \
+  --account-name=admin \
+  --account-pass=admin \
+  --site-name="Drupal Site" \
+  -y
+
+echo ""
+echo "✅ Reset complete!"
+echo ""
+echo "Your site is ready at:"
+ddev describe | grep "https://" | head -1
+echo ""
+echo "Login credentials:"
+echo "  Username: admin"
+echo "  Password: admin"
+echo ""
+echo "Run 'ddev launch' to open the site in your browser."
+```
+
+**File**: `scripts/sync-from-prod.sh`
+
+```bash
+#!/bin/bash
+
+# Template for syncing from production
+# Customize with your actual production environment
+
+set -e
+
+echo "🔄 Syncing from production..."
+echo ""
+echo "⚠️  WARNING: This will overwrite your local database and files!"
+echo ""
+read -p "Continue? (y/N) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]
+then
+    echo "Cancelled."
+    exit 1
+fi
+
+# Create a backup first
+echo "⏳ Creating local snapshot..."
+ddev snapshot --name=before-prod-sync
+
+# Sync database (customize @prod alias in drush/sites/*.yml)
+echo "⏳ Syncing database..."
+# ddev drush sql-sync @prod @self -y
+
+# Sync files (optional, can be slow)
+echo "⏳ Syncing files..."
+# ddev drush rsync @prod:%files @self:%files -y
+
+# Import configuration
+echo "⏳ Importing configuration..."
+# ddev drush cim -y
+
+# Update database
+echo "⏳ Running database updates..."
+# ddev drush updb -y
+
+# Clear caches
+echo "⏳ Clearing caches..."
+# ddev drush cr
+
+echo ""
+echo "✅ Production sync complete!"
+echo ""
+echo "If something went wrong, restore with:"
+echo "  ddev snapshot restore --name=before-prod-sync"
+```
+
+**File**: `scripts/pre-commit-hook.sh`
+
+```bash
+#!/bin/bash
+
+# Git pre-commit hook for code quality
+# To enable: ln -s ../../scripts/pre-commit-hook.sh .git/hooks/pre-commit
+
+echo "🔍 Running pre-commit checks..."
+
+# Get list of PHP files to check
+FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(php|module|inc|install|test|profile|theme)$' || true)
+
+if [ -z "$FILES" ]; then
+    echo "✅ No PHP files to check"
+    exit 0
+fi
+
+# Run PHP linting
+echo "  → Checking PHP syntax..."
+for FILE in $FILES; do
+    php -l "$FILE" > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        echo "❌ PHP syntax error in: $FILE"
+        exit 1
+    fi
+done
+
+# Run PHPCS (if available)
+if command -v phpcs &> /dev/null; then
+    echo "  → Checking code standards..."
+    phpcs --standard=Drupal,DrupalPractice $FILES
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo "❌ Code standard violations found"
+        echo "   Run 'ddev composer lint:fix' to auto-fix some issues"
+        exit 1
+    fi
+fi
+
+echo "✅ Pre-commit checks passed!"
+exit 0
+```
+
+---
+
+## Skill Behavior Improvements
+
+### 12. Enhanced User Communication
+
+When DDEV is not available, the skill should output:
+
+```
+✅ Drupal project structure created successfully!
+
+📁 Created Files:
+   • .ddev/config.yaml - DDEV configuration
+   • composer.json - PHP dependencies
+   • web/sites/default/settings.php - Drupal settings
+   • drush/drush.yml - Drush configuration
+   • config/sync/ - Configuration management directory
+   • SETUP.md - Detailed setup instructions
+   • README.md - Quick reference guide
+
+🎯 Next Steps:
+
+   Since DDEV is not available in this environment, you'll need to:
+
+   1. Install DDEV on your local machine:
+      https://ddev.readthedocs.io/en/stable/users/install/
+
+   2. Start the environment:
+      ddev start
+
+   3. Install dependencies:
+      ddev composer install
+
+   4. Install Drupal:
+      ddev drupal-install
+      # or manually:
+      ddev drush site:install standard --db-url=sqlite://sites/default/files/.sqlite --account-name=admin --account-pass=admin -y
+
+   5. Access your site:
+      ddev launch
+
+📖 For detailed instructions, see SETUP.md
+```
+
+### 13. Interactive Mode
+
+Add a configuration file `.drupal-skill.yml` that the skill can read:
+
+```yaml
+# Drupal Setup Skill Configuration
+project:
+  name: my-drupal-site
+  drupal_version: "10.2"
+  php_version: "8.2"
+  database: mariadb  # or sqlite
+
+profile: standard  # or minimal, demo_umami
+
+mode: batteries-included  # or minimal
+
+features:
+  devel_module: true
+  admin_toolbar: true
+  pathauto: true
+  examples: true  # Include example custom module/theme
+
+ddev:
+  nodejs_version: "18"
+  additional_services:
+    - redis
+    - solr
+```
+
+### 14. Validation After Creation
+
+The skill should run validation checks:
+
+```bash
+# Check that critical files can be committed
+git add --dry-run .ddev/config.yaml composer.json web/sites/default/settings.php
+
+# Check that sensitive files are properly ignored
+git check-ignore web/sites/default/settings.local.php
+git check-ignore vendor/
+
+# Validate composer.json syntax
+composer validate --no-check-all
+
+# Validate DDEV config (if DDEV available)
+ddev config --dry-run
+```
+
+---
+
+## Priority Implementation Order
+
+### Phase 1: Critical Fixes
+1. **Fix `.gitignore` patterns** - Prevents files not being committed
+2. **Add `.editorconfig`** - Ensures code consistency
+3. **Add `.gitattributes`** - Prevents line-ending issues
+
+### Phase 2: Developer Experience
+4. **Add directory README files** - Improves onboarding
+5. **Enhance `settings.php`** - Speeds up common configurations
+6. **Add `TROUBLESHOOTING.md`** - Reduces support requests
+
+### Phase 3: Advanced Features
+7. **Add custom DDEV commands** - Improves workflow
+8. **Enhance `composer.json`** - Better dev tools
+9. **Add helper scripts** - Power user features
+
+### Phase 4: Skill Enhancements
+10. **Improve skill output** - Better user communication
+11. **Add interactive mode** - Customizable setups
+12. **Add validation** - Catch issues early
+
+---
+
+## Testing Checklist
+
+After implementing improvements, test:
+
+- [ ] All committed files are properly staged (not gitignored)
+- [ ] Sensitive files are properly gitignored
+- [ ] `composer.json` validates successfully
+- [ ] DDEV starts without errors
+- [ ] Drupal installs successfully with both SQLite and MariaDB
+- [ ] Custom DDEV commands work
+- [ ] Documentation is clear and accurate
+- [ ] Scripts are executable and work as expected
+- [ ] Line endings are consistent across platforms
+- [ ] Code style is consistent in generated files
+
+---
+
+## Additional Considerations
+
+### Module Recommendations
+
+Consider adding these commonly-used modules to a "batteries-included" mode:
+
+```json
+{
+  "require": {
+    "drupal/admin_toolbar": "^3.4",
+    "drupal/pathauto": "^1.11",
+    "drupal/redirect": "^1.9",
+    "drupal/token": "^1.13",
+    "drupal/paragraphs": "^1.16"
+  },
+  "require-dev": {
+    "drupal/devel": "^5.0",
+    "drupal/stage_file_proxy": "^2.1"
+  }
+}
+```
+
+### Example Custom Module
+
+Consider creating an example custom module `web/modules/custom/example_module/` with:
+- Basic module structure
+- Example service
+- Example controller
+- Example route
+- PHPUnit test
+- README explaining each part
+
+This serves as a learning tool and template for developers.
+
+---
+
+## Conclusion
+
+These improvements address:
+- **Critical bugs** (gitignore issues)
+- **Developer experience** (documentation, examples)
+- **Workflow efficiency** (scripts, commands)
+- **Code quality** (linting, standards)
+- **Team collaboration** (clear documentation, consistent setup)
+
+Implementing these changes will make the Drupal setup skill more robust, user-friendly, and production-ready.
+
+
+## Improvements As an Agent using an existing project locally
+
+USER COMMENTS: ALL the below suggestions but the agent are good and useful to implement
+
+**Based on first test run: 2025-11-11**
+
+### 1. **CRITICAL: Authentication & Manual Steps Detection**
+
+**Problem**: The skill attempts commands requiring authentication (git clone, ddev start with sudo), which fail and waste time.
+
+**What happened**:
+- Attempted `git clone` with HTTPS → Failed (no credentials)
+- Attempted `git clone` with SSH → Blocked by user
+- Attempted `ddev start` → Failed (needs sudo password on first run)
+
+**Solution**: Detect authentication requirements upfront and provide manual instructions BEFORE attempting.
+
+**Implementation**:
+```
+At start of "Existing Project Setup":
+
+1. User provides GitHub URL (Or other way of pointing to the git project)
+2. Immediately output manual instructions (These should be with relevant informaiton filled in so they can be copy and pasted)
+
+┌─────────────────────────────────────────────────────────────┐
+│ MANUAL STEPS REQUIRED (authentication needed)              │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ Please run these commands:                                  │
+│                                                             │
+│ 1. Clone repository:                                        │
+│    cd /path/to/directory                                   │
+│    git clone git@github.com:user/repo.git folder-name     │
+│    cd folder-name                                          │
+│    git checkout branch-name                                │
+│                                                             │
+│ 2. Start DDEV (requires sudo):                             │
+│    ddev start                                              │
+│                                                             │
+│ Type 'done' when complete                                   │
+└─────────────────────────────────────────────────────────────┘
+
+3. Wait for user confirmation
+4. Then proceed with automated steps (composer install, drush commands)
+```
+
+**Commands to NEVER attempt**:
+- `git clone`
+- `git push`
+- `git pull`
+- `ddev start` (first time - check if hostname exists in /etc/hosts)
+
+**Safe commands**:
+- All `ddev drush` commands
+- All `ddev composer` commands
+- `ddev describe`, `ddev restart`
+- Local git operations: `git status`, `git add`, `git commit`
+
+---
+
+### 2. **Empty Config Directory Detection**
+
+**Problem**: Skill checks for `config/sync` directory but doesn't verify it contains actual config files.
+
+**What happened**:
+- Directory existed with only `.gitkeep`
+- Skill planned to "install from existing config"
+- Actually needed fresh install
+
+**Solution**: Check for actual config content:
+
+```bash
+if [ -f "config/sync/core.extension.yml" ]; then
+  echo "✓ Found existing configuration"
+  ddev drush site:install --existing-config --account-pass=admin -y
+else
+  echo "ℹ No configuration found - fresh install"
+  ddev drush site:install --account-pass=admin -y
+  ddev drush config:export -y
+fi
+```
+
+---
+
+### 3. **Upfront Summary of Manual Steps**
+
+**Problem**: User discovers manual steps incrementally, which is frustrating.
+
+**Solution**: Show complete checklist at start:
+
+```
+Drupal Project Setup Plan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 MANUAL STEPS (you):
+   [ ] 1. Clone repository (authentication required)
+   [ ] 2. Start DDEV (sudo password required)
+
+🤖 AUTOMATED STEPS (me):
+   [ ] 3. Verify project structure
+   [ ] 4. Install Composer dependencies (~2-3 min)
+   [ ] 5. Install Drupal
+   [ ] 6. Export configuration
+   [ ] 7. Provide access details
+
+Estimated time: ~5 minutes
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+Update checklist as progress happens using emojis: [✓] [→] [ ]
+
+---
+
+### 4. **DDEV First-Start Detection**
+
+**Problem**: First `ddev start` needs sudo. Skill tries anyway and fails.
+
+**Solution**: Check if hostname already in hosts file:
+
+```bash
+PROJECT_HOSTNAME="${PROJECT_NAME}.ddev.site"
+
+if grep -q "$PROJECT_HOSTNAME" /etc/hosts 2>/dev/null; then
+  ddev start  # Safe to run
+else
+  # Show manual instruction (needs sudo)
+  echo "Please run: ddev start (requires sudo password)"
+  # Wait for user
+fi
+```
+
+---
+
+### 5. **Better Post-Setup Guidance**
+
+**Problem**: After setup, user doesn't know what to do next.
+
+**Solution**: Provide actionable next steps:
+
+```
+✅ Setup Complete!
+
+🌐 Your Site:
+   URL: https://project.ddev.site
+   One-time login: https://project.ddev.site/user/reset/...
+
+   Username: admin
+   Password: admin
+
+📝 Next Steps:
+
+   Development workflow:
+   • Make changes in Drupal UI
+   • Export config: ddev drush cex -y
+   • Commit: git add -A && git commit -m "message"
+
+   Common commands:
+   • ddev drush uli          # One-time login
+   • ddev drush cr           # Clear cache
+   • ddev launch             # Open in browser
+   • ddev drush watchdog:show # View logs
+
+📖 See README.md for more details
+```
+
+---
+
+### Priority Implementation Order
+
+1. **Authentication & Manual Steps** ⭐⭐⭐ - Affects every setup
+2. **Upfront Summary** ⭐⭐⭐ - Major UX improvement
+3. **Empty Config Detection** ⭐⭐ - Prevents wrong workflow
+4. **DDEV Sudo Detection** ⭐⭐ - Common pain point
+5. **Post-Setup Guidance** ⭐ - Better user experience
+
+---
+
+### Key Philosophy Change
+
+**Before**: Try everything, fail, ask user to fix
+**After**: Detect auth requirements upfront, guide user through manual steps, automate the rest smoothly
