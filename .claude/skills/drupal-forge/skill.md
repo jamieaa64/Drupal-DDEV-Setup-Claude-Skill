@@ -172,20 +172,58 @@ Proceed with new project creation. Gather the following information:
     git push -u origin main
     ```
 
-11. **Report what needs to be done next**:
+11. **Generate DrupalPod URL for instant site creation**
+    ```bash
+    # Extract GitHub repo URL and construct DrupalPod URL
+    GITHUB_REPO_URL="<github-url>"
+    # Convert GitHub URL to branch format (e.g., https://github.com/user/repo -> https://github.com/user/repo/tree/main)
+    DP_REPO_BRANCH="${GITHUB_REPO_URL%.git}/tree/main"
+    
+    # URL-encode the DP_REPO_BRANCH parameter
+    ENCODED_REPO=$(echo "$DP_REPO_BRANCH" | sed 's/:/%3A/g; s/\//%2F/g; s/#/%23/g; s/?/%3F/g; s/&/%26/g')
+    
+    # Construct DrupalPod URL
+    DRUPALPOD_URL="https://www.drupalforge.org/drupalpod?DP_APP_ROOT=/var/www/html&DP_WEB_ROOT=/var/www/html/web&DP_REPO_BRANCH=${ENCODED_REPO}&DP_IMAGE=drupalforge/drupalpod:latest"
     ```
-    Project structure created! To complete the setup:
 
-    1. Install Drupal (if not already installed):
+12. **Report success with DrupalPod URL**:
+    ```
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    ✅ Project Created and Pushed to GitHub!
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    📦 Repository: <github-url>
+    🌿 Branch: main
+
+    🚀 Create Your Live Drupal Site:
+    
+    Click this link to instantly create a Drupal Forge site from your repository:
+    
+    <DRUPALPOD_URL>
+    
+    Or visit: https://www.drupalforge.org/drupalpod
+    And use these parameters:
+    - DP_APP_ROOT: /var/www/html
+    - DP_WEB_ROOT: /var/www/html/web
+    - DP_REPO_BRANCH: <DP_REPO_BRANCH>
+    - DP_IMAGE: drupalforge/drupalpod:latest
+
+    📝 Next Steps:
+    
+    After DrupalPod creates your site:
+    1. Access your new Drupal Forge site
+    2. Install Drupal (if not already installed):
        drush site:install --account-pass=admin -y
-
-    2. Export configuration:
+    
+    3. Export configuration:
        drush config:export -y
-
-    3. Commit the configuration:
+    
+    4. Commit the configuration:
        git add config/sync
        git commit -m "Add initial configuration export"
        git push
+
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     ```
 
 ### Full Mode (Advanced, Optional)
@@ -279,13 +317,48 @@ Proceed with new project creation. Gather the following information:
     git push -u origin main
     ```
 
-16. **Report success**
+16. **Generate DrupalPod URL for instant site creation**
+    ```bash
+    # Extract GitHub repo URL and construct DrupalPod URL
+    GITHUB_REPO_URL="<github-url>"
+    # Convert GitHub URL to branch format (e.g., https://github.com/user/repo -> https://github.com/user/repo/tree/main)
+    DP_REPO_BRANCH="${GITHUB_REPO_URL%.git}/tree/main"
+    
+    # URL-encode the DP_REPO_BRANCH parameter
+    ENCODED_REPO=$(echo "$DP_REPO_BRANCH" | sed 's/:/%3A/g; s/\//%2F/g; s/#/%23/g; s/?/%3F/g; s/&/%26/g')
+    
+    # Construct DrupalPod URL
+    DRUPALPOD_URL="https://www.drupalforge.org/drupalpod?DP_APP_ROOT=/var/www/html&DP_WEB_ROOT=/var/www/html/web&DP_REPO_BRANCH=${ENCODED_REPO}&DP_IMAGE=drupalforge/drupalpod:latest"
     ```
+
+17. **Report success with DrupalPod URL**
+    ```
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    ✅ Drupal Installed and Pushed to GitHub!
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
     ✓ Drupal installed successfully!
     ✓ Configuration exported to config/sync/
     ✓ Pushed to GitHub: <github-url>
 
-    Your site is ready on Drupal Forge!
+    📦 Repository: <github-url>
+    🌿 Branch: main
+
+    🚀 Create Your Live Drupal Site:
+    
+    Click this link to instantly create a Drupal Forge site from your repository:
+    
+    <DRUPALPOD_URL>
+    
+    Or visit: https://www.drupalforge.org/drupalpod
+    And use these parameters:
+    - DP_APP_ROOT: /var/www/html
+    - DP_WEB_ROOT: /var/www/html/web
+    - DP_REPO_BRANCH: <DP_REPO_BRANCH>
+    - DP_IMAGE: drupalforge/drupalpod:latest
+
+    Your site is ready! Access it through DrupalPod.
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     ```
 
 ## Existing Project Workflows
