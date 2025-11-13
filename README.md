@@ -69,13 +69,54 @@ Update my local Drupal environment
 - ✅ Optional Full Mode (SQLite for testing)
 - ✅ Complete lifecycle management (setup → develop → maintain)
 - ✅ Team collaboration workflows
+- ✅ **Drupal Forge/DrupalPod integration** - Generate instant live site URLs from GitHub repos
+
+## 🌐 Drupal Forge & DrupalPod Integration
+
+This repository now includes a **`drupal-forge` skill** that extends the original DDEV-focused skill with support for Drupal Forge/Dev Panel environments.
+
+Realizes the "dream" mentioned in Jamie's LinkedIn post from Nov 11 2025 about making it work with DevPanel and Drupal Forge so when AI pushes something to a branch, you can immediately see the changes on a hosted site.
+
+### What It Does
+
+The `drupal-forge` skill enables **instant live site creation** from GitHub repositories:
+
+1. **Create a Drupal project** using Claude Code
+2. **Push to GitHub** (automated)
+3. **Get a DrupalPod URL** (automatically generated)
+4. **Click to create** your live Drupal Forge site instantly
+
+### Workflow
+
+```
+Claude Code (AI creates project)
+    ↓
+GitHub (auto-pushed)
+    ↓
+DrupalPod URL (auto-generated)
+    ↓
+Live Drupal Forge Site (one click!)
+```
+
+### Using the Drupal Forge Skill
+
+The `drupal-forge` skill works similarly to `drupal-setup` but:
+- Commands run directly (no `ddev` prefix needed)
+- Designed for live Drupal Forge environments
+- Automatically generates DrupalPod URLs after pushing to GitHub
+- Includes safety checks for live site operations
+
+**Location**: `.claude/skills/drupal-forge/`
+
+**Documentation**: See [.claude/skills/drupal-forge/README.md](.claude/skills/drupal-forge/README.md)
 
 ## 📚 Documentation
 
 - **[INSTALL.md](INSTALL.md)** - Complete installation guide
 - **[plan.md](plan.md)** - Architecture and design decisions
 - **[CurrentWorkflow.md](CurrentWorkflow.md)** - Organization's Drupal workflow
-- **[.claude/skills/drupal-setup/README.md](.claude/skills/drupal-setup/README.md)** - Detailed skill documentation
+- **[.claude/skills/drupal-setup/README.md](.claude/skills/drupal-setup/README.md)** - Detailed skill documentation for DDEV
+- **[.claude/skills/drupal-forge/README.md](.claude/skills/drupal-forge/README.md)** - Detailed skill documentation for Drupal Forge
 
 ## 🚀 Usage Examples
 
@@ -174,6 +215,30 @@ Environment reset complete!
 Fresh Drupal installation with current configuration.
 ```
 
+### Scenario 5: Instant Live Preview with DrupalPod
+
+```
+You: "Create a new Drupal CMS site called 'demo-site'"
+
+Claude: I'll help you set up a new Drupal project!
+
+[... project setup ...]
+
+✓ Project created in 30 seconds!
+✓ Pushed to GitHub: https://github.com/username/demo-site.git
+
+🚀 Create Your Live Drupal Site:
+Click here to instantly create your Drupal Forge site:
+https://www.drupalforge.org/drupalpod?DP_REPO_BRANCH=https%3A%2F%2Fgithub.com%2Fusername%2Fdemo-site%2Ftree%2Fmain&...
+
+[Click the URL]
+
+✓ DrupalPod creates your live site instantly
+✓ Share the URL with team members or clients
+✓ Changes pushed to GitHub automatically update the live site
+✓ Perfect for demos, previews, and client reviews!
+```
+
 ## 🏗️ Project Structure
 
 Created projects include:
@@ -242,6 +307,9 @@ project-name/
 
 ## 📦 What's in the Box
 
+This repository includes **two skills**:
+
+### 1. `drupal-setup` (Original - DDEV-focused)
 - **skill.md** (15KB) - Main skill instructions
 - **init.sh** (1KB) - Initialization script
 - **README.md** (12KB) - Skill documentation
@@ -252,13 +320,22 @@ project-name/
   - README.md - Project documentation
   - CLAUDE.md - Claude guidance for projects
 
-Total size: ~46KB
+### 2. `drupal-forge` (New - Drupal Forge/DrupalPod)
+- **skill.md** (17KB) - Main skill instructions with DrupalPod integration
+- **README.md** (15KB) - Skill documentation
+- **templates/** - Drupal Forge-adapted templates
+  - settings.php - Forge-adapted settings
+  - gitignore - Drupal .gitignore
+  - README.md - Project documentation
+  - CLAUDE.md - Claude guidance for projects
+
+**Total size**: ~78KB (both skills)
 
 ## 🚧 Future Enhancements
 
 Planned features (see [plan.md](plan.md)):
 
-- **DevPanel Integration** - Push to GitHub → Automatic deployment
+- ✅ **DrupalPod Integration** - Push to GitHub → Instant Drupal Forge site creation (implemented in `drupal-forge` skill)
 - **Drupal.org Integration** - Work with Drupal.org issues and GitLab branches
 - **Multi-environment support** - Dev/staging/prod configurations
 - **CI/CD templates** - GitHub Actions workflows
